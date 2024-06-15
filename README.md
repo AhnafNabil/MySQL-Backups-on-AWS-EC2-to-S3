@@ -66,6 +66,8 @@ Let’s create an IAM role with the necessary permissions for EC2 to write to ou
     }
    ```
 
+   Replace ``your-bucket-name`` with your bucket name.
+
    ![alt text](./images/policy.PNG)
 
 2. **Attach the Role to EC2**:
