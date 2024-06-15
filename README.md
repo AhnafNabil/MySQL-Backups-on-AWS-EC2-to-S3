@@ -2,6 +2,8 @@
 
 This guide provides a comprehensive step-by-step process to automate MySQL database backups on an AWS EC2 instance, store them in an S3 bucket, and send a notification via WhatsApp using Twilio. In this document, we’ll walk through the process of automating MySQL database backups on an AWS EC2 instance and storing them in an S3 bucket. This setup will ensure that our data is backed up regularly and securely.
 
+![alt text](./images/backup.PNG)
+
 ## Prerequisites
 
 1. **AWS Account**: Ensure you have an AWS account.
@@ -19,6 +21,8 @@ Create a vpc and Launch an EC2 instance for running the mysql.
    - Go to the S3 console.
    - Click "Create bucket" and follow the prompts.
    - Make sure versioning is enabled as going forward we have to apply lifecycle policy on our bucket.
+
+   ![alt text](./images/bucket-versioning.PNG)
    
 2. **Create a Lifecycle Rule**:
    - Navigate to the bucket's "Management" tab.
@@ -29,12 +33,17 @@ Create a vpc and Launch an EC2 instance for running the mysql.
 
 Click create rule and it’s done.
 
+![alt text](./images/lifecycle-rule.PNG)
+
 ## Step 3: Attach an IAM Role to the EC2 Instance
 
 Let’s create an IAM role with the necessary permissions for EC2 to write to our S3 bucket.
 
 1. **Create an IAM Role**:
    - Go to the IAM console and create a new role.
+
+     ![alt text](./images/role.PNG)
+
    - Attach the following policy:
 
    ```json
@@ -57,8 +66,10 @@ Let’s create an IAM role with the necessary permissions for EC2 to write to ou
     }
    ```
 
+   ![alt text](./images/policy.PNG)
+
 2. **Attach the Role to EC2**:
-   - Attach the created IAM role to the EC2 instance and now our server will be able to communicate with the created S3 bucket.
+   - Attach the created IAM role to the EC2 instance in the security and now our server will be able to communicate with the created S3 bucket.
 
 ## Step 4: Install MySQL on the EC2 Instance
 
@@ -108,7 +119,73 @@ Create a user specifically for performing backups:
 
 Our database setup is completed and now let’s move forward to the next step of writing backup script.
 
-## Step 7: Write a Backup Script
+## Step 7: Set Up Twilio Account
+
+1. **Sign Up for Twilio**:
+   - Sign up at [Twilio](https://www.twilio.com/try-twilio).
+   - Verify your phone number.
+
+2. **Set Up WhatsApp Sandbox**:
+   - Navigate to the [Twilio Sandbox for WhatsApp](https://www.twilio.com/console/sms/whatsapp/sandbox).
+   - Follow the instructions to join the sandbox.
+
+3. **Retrieve Credentials**:
+   - Note your `Account SID` and `Auth Token` from the Twilio Console.
+
+
+## Step 8: Install Twilio CLI on EC2 Instance
+
+1. **Create a virtual environment**:
+
+    ```sh
+    sudo apt install python3.12-venv
+    python3 -m venv venv
+    ```
+
+2. **Activate the virtual environment**:
+
+    ```sh
+    source venv/bin/activate
+    ```
+
+3. **Install the package** within the virtual environment:
+
+    ```sh
+    pip install twilio
+    ```
+
+4. **Verify the installation**:
+
+    ```sh
+    pip list
+    ```
+    You should see `twilio` in the list of installed packages.
+
+## Step 9: Set Environment Variables in ``.bashrc`` file on your EC2 instance:
+
+1. **Set Environment Variables**:
+   
+   Open the ``.bashrc`` file with a text editor such as nano or vim.
+
+   ```sh
+   nano ~/.bashrc
+   ```
+
+   Add the following lines to your `.bashrc`:
+
+   ```sh
+   export TWILIO_ACCOUNT_SID="your_account_sid"
+   export TWILIO_AUTH_TOKEN="your_auth_token"
+   export TO_WHATSAPP_NUMBER="whatsapp:+your_number"
+   ```
+
+   Reload the shell configuration:
+
+   ```sh
+   source ~/.bashrc
+   ```
+
+## Step 10: Write a Backup Script
 
 Create a file ``backup_script.sh`` in the EC2 instance that will handle the database dump.
 
@@ -147,7 +224,7 @@ Create a file ``backup_script.sh`` in the EC2 instance that will handle the data
     TWILIO_ACCOUNT_SID=$TWILIO_ACCOUNT_SID
     TWILIO_AUTH_TOKEN=$TWILIO_AUTH_TOKEN
     TWILIO_WHATSAPP_NUMBER="whatsapp:+your_number"  # Twilio's WhatsApp sandbox number
-    TO_WHATSAPP_NUMBER=$TO_WHATSAPP_NUMBER     # Replace with your WhatsApp number
+    TO_WHATSAPP_NUMBER=$TO_WHATSAPP_NUMBER     # your WhatsApp number
 
     # Send WhatsApp notification using Twilio API
     MESSAGE_BODY="MySQL backup completed and uploaded to S3."
@@ -191,7 +268,7 @@ Replace the shebang line in your script with the correct path.
    chmod +x backup_script.sh
    ```
 
-## Step 8: Schedule the Backup Script with Cron
+## Step 11: Schedule the Backup Script with Cron
 
 Edit the crontab to schedule the backup script to run every 3 hours:
 
@@ -210,37 +287,8 @@ Edit the crontab to schedule the backup script to run every 3 hours:
 
 Replace `/path/to/backup_script.sh` with the actual path to your script.
 
-## Step 9: Set Up Twilio Account
 
-1. **Sign Up for Twilio**:
-   - Sign up at [Twilio](https://www.twilio.com/try-twilio).
-   - Verify your phone number.
-
-2. **Set Up WhatsApp Sandbox**:
-   - Navigate to the [Twilio Sandbox for WhatsApp](https://www.twilio.com/console/sms/whatsapp/sandbox).
-   - Follow the instructions to join the sandbox.
-
-3. **Retrieve Credentials**:
-   - Note your `Account SID` and `Auth Token` from the Twilio Console.
-
-## Step 10: Set Environment Variables in ``.bashrc`` file on your EC2 instance:
-
-1. **Set Environment Variables**:
-   Add the following lines to your `.bashrc`:
-
-   ```sh
-   export TWILIO_ACCOUNT_SID="your_account_sid"
-   export TWILIO_AUTH_TOKEN="your_auth_token"
-   export TO_WHATSAPP_NUMBER="whatsapp:+your_number"
-   ```
-
-   Reload the shell configuration:
-
-   ```sh
-   source ~/.bashrc
-   ```
-
-## Step 11: Verify the Setup
+## Step 12: Verify the Setup
 
 To ensure everything is set up correctly execute the following steps:
 
@@ -259,6 +307,8 @@ To ensure everything is set up correctly execute the following steps:
    ```sh
    grep CRON /var/log/syslog
    ```
+
+   ![alt text](./images/backup-log.PNG)
 
 3. **Check WhatsApp**:
    Ensure you receive the WhatsApp notification on the specified number.
