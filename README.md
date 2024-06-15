@@ -251,6 +251,8 @@ To ensure everything is set up correctly execute the following steps:
    ./backup_script.sh
    ```
 
+   ![alt text](./images/wapp-01.PNG)
+
 2. **Check Logs**:
    Verify the cron logs:
 
@@ -260,6 +262,15 @@ To ensure everything is set up correctly execute the following steps:
 
 3. **Check WhatsApp**:
    Ensure you receive the WhatsApp notification on the specified number.
+
+   ![alt text](./images/wapp-02.PNG)
+
+4. **Check S3 Bucket**:
+   Verify the backup file is uploaded to the S3 bucket.
+
+   ![alt text](./images/wapp-03.PNG)
+
+We can see that our script has been executed successfully and has pushed the MySQL backup dump into our S3 bucket.
 
 ## Conclusion
 
