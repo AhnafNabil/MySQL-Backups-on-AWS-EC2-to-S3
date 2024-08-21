@@ -2,7 +2,7 @@
 
 This guide provides a comprehensive step-by-step process to automate MySQL database backups on an AWS EC2 instance, store them in an S3 bucket, and send a notification via WhatsApp using Twilio. In this document, we’ll walk through the process of automating MySQL database backups on an AWS EC2 instance and storing them in an S3 bucket. This setup will ensure that our data is backed up regularly and securely.
 
-![alt text](./images/backup.PNG)
+![alt text](./images/backup-diagram.png)
 
 ## Prerequisites
 
@@ -11,9 +11,180 @@ This guide provides a comprehensive step-by-step process to automate MySQL datab
 3. **EC2 Instance**: An EC2 instance running Ubuntu or a similar Linux distribution.
 4. **Twilio Account**: Sign up for a Twilio account.
 
-## Step 1: Launch an EC2 instance
+## Step 1: Launch an EC2 instance using pulumi
 
-Create a vpc and Launch an EC2 instance for running the mysql. 
+For this project, we need an instance for mysql and other necessary resouces. We will provision an EC2 instance to host MySQL. While the instance will be created in a public subnet for the purpose of this demonstration, it is important to note that deploying MySQL in a public subnet is not recommended due to security concerns.
+
+### Configure AWS CLI
+
+- Configure AWS CLI with the necessary credentials. Run the following command and follow the prompts to configure it:
+
+    ```sh
+    aws configure
+    ```
+    
+    This command sets up your AWS CLI with the necessary credentials, region, and output format.
+
+    ![alt text](./images/configure.png)
+
+    You will find the `AWS Access key` and `AWS Seceret Access key` on Lab description page,where you generated the credentials
+
+    ![alt text](./images/credentials.png)
+
+
+### Set Up a Pulumi Project
+
+1. **Set Up a Pulumi Project**:
+
+- Create a new directory for your project and navigate into it:
+
+    ```sh
+    mkdir aws-mysql-infra
+    cd aws-mysql-infra
+    ```
+
+2. **Initialize a New Pulumi Project**:
+
+- Run the following command to create a new Pulumi project:
+
+    ```sh
+    pulumi new aws-javascript
+    ```
+    Follow the prompts to set up your project.
+
+3. **Create Key Pair**:
+
+- Create a new key pair for our instances using the following command:
+
+    ```sh
+    aws ec2 create-key-pair --key-name MyKeyPair --query 'KeyMaterial' --output text > MyKeyPair.pem
+    ```
+
+    These commands will create key pair for mysql instance.
+
+4. **Set File Permissions of the key files**:
+
+- **For Linux**:
+
+    ```sh
+    chmod 400 MyKeyPair.pem
+    ```
+
+### Write Code for infrastructure creation
+
+1. **Open `index.js` file in your project directory**:
+
+   ```js
+   const pulumi = require("@pulumi/pulumi");
+   const aws = require("@pulumi/aws");
+
+   // Create a VPC
+   const vpc = new aws.ec2.Vpc("my-vpc", {
+      cidrBlock: "10.0.0.0/16",
+      tags: {
+         Name: "my-vpc"
+      }
+   });
+
+   exports.vpcId = vpc.id;
+
+   // Create a public subnet
+   const publicSubnet = new aws.ec2.Subnet("public-subnet", {
+      vpcId: vpc.id,
+      cidrBlock: "10.0.1.0/24",
+      availabilityZone: "ap-southeast-1a",
+      mapPublicIpOnLaunch: true,
+      tags: {
+         Name: "public-subnet"
+      }
+   });
+
+   exports.publicSubnetId = publicSubnet.id;
+
+   // Create an Internet Gateway
+   const internetGateway = new aws.ec2.InternetGateway("internet-gateway", {
+      vpcId: vpc.id,
+      tags: {
+         Name: "igw"
+      }
+   });
+
+   exports.igwId = internetGateway.id;
+
+   // Create a Route Table
+   const publicRouteTable = new aws.ec2.RouteTable("public-route-table", {
+      vpcId: vpc.id,
+      tags: {
+         Name: "rt-public"
+      }
+   });
+
+   // Create a route in the route table for the Internet Gateway
+   const route = new aws.ec2.Route("igw-route", {
+      routeTableId: publicRouteTable.id,
+      destinationCidrBlock: "0.0.0.0/0",
+      gatewayId: internetGateway.id
+   });
+
+   // Associate the Route Table with the Public Subnet
+   const routeTableAssociation = new aws.ec2.RouteTableAssociation("public-route-table-association", {
+      subnetId: publicSubnet.id,
+      routeTableId: publicRouteTable.id
+   });
+
+   exports.publicRouteTableId = publicRouteTable.id;
+
+   // Create a Security Group for the Public Instance
+   const publicSecurityGroup = new aws.ec2.SecurityGroup("public-secgrp", {
+      vpcId: vpc.id,
+      description: "Enable SSH and MySQL access for public instance",
+      ingress: [
+         { protocol: "tcp", fromPort: 22, toPort: 22, cidrBlocks: ["0.0.0.0/0"] },  // SSH
+         { protocol: "tcp", fromPort: 3306, toPort: 3306, cidrBlocks: ["0.0.0.0/0"] },  // MySQL
+      ],
+      egress: [
+         { protocol: "-1", fromPort: 0, toPort: 0, cidrBlocks: ["0.0.0.0/0"] }  // Allow all outbound traffic
+      ],
+      tags: {
+         Name: "public-secgrp"
+      }
+   });
+
+   // Use the specified Ubuntu 24.04 LTS AMI
+   const amiId = "ami-060e277c0d4cce553";
+
+   // Create MySQL Instance
+   const mysqlInstance = new aws.ec2.Instance("mysql-instance", {
+      instanceType: "t2.micro",
+      vpcSecurityGroupIds: [publicSecurityGroup.id],
+      ami: amiId,
+      subnetId: publicSubnet.id,
+      keyName: "MyKeyPair",
+      associatePublicIpAddress: true,
+      tags: {
+         Name: "MySQLInstance",
+         Environment: "Development",
+         Project: "MySQLSetup"
+      }
+   });
+
+   exports.mysqlInstanceId = mysqlInstance.id;
+   exports.mysqlInstanceIp = mysqlInstance.publicIp;
+   exports.mysqlInstanceDns = mysqlInstance.publicDns;
+   ```   
+
+### Deploy the Pulumi Stack
+
+1. **Deploy the stack**:
+
+    ```sh
+    pulumi up
+    ```
+    Review the changes and confirm by typing "yes".
+
+### Verify the Deployment
+
+You can verify the created resources such as VPC, Subnet, EC2 instance using AWS console. 
 
 ## Step 2: Create an S3 Bucket and Lifecycle Rule
 
@@ -47,24 +218,25 @@ Let’s create an IAM role with the necessary permissions for EC2 to write to ou
    - Attach the following policy:
 
    ```json
-    {
-        "Version": "2012-10-17",
-        "Statement": [
-            {
-                "Effect": "Allow",
-                "Action": [
-                    "s3:PutObject",
-                    "s3:GetObject",
-                    "s3:ListBucket"
-                ],
-                "Resource": [
-                    "arn:aws:s3:::your-bucket-name",
-                    "arn:aws:s3:::your-bucket-name/*"
-                ]
-            }
-        ]
-    }
+   {
+      "Version": "2012-10-17",
+      "Statement": [
+         {
+               "Effect": "Allow",
+               "Action": [
+                  "s3:PutObject",
+                  "s3:GetObject",
+                  "s3:ListBucket"
+               ],
+               "Resource": [
+                  "arn:aws:s3:::your-bucket-name",
+                  "arn:aws:s3:::your-bucket-name/*"
+               ]
+         }
+      ]
+   }
    ```
+
 
    Replace ``your-bucket-name`` with your bucket name.
 
