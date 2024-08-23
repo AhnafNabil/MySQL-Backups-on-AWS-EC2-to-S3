@@ -394,30 +394,35 @@ Our database setup is completed and now let’s move forward to the next step of
 
     ![alt text](./images/list-pip.png)
 
-## Step 9: Set Environment Variables in ``.bashrc`` file on your EC2 instance:
-   
-Open the ``.bashrc`` file with a text editor such as nano or vim.
+## Step 9: Set Environment Variables in ``backup_env.sh`` file on your EC2 instance:
+
+First, create a separate file to store your environment variables. This is more secure than putting them directly in the crontab or backup script. Let's call it `backup_env.sh`:
 
 ```sh
-nano ~/.bashrc
+nano backup_env.sh
 ```
 
-Add the following lines to your `.bashrc`:
+Add your environment variables to this file:
 
 ```sh
 export TWILIO_ACCOUNT_SID="your_account_sid"
 export TWILIO_AUTH_TOKEN="your_auth_token"
 export TO_WHATSAPP_NUMBER="whatsapp:+your_number"
 ```
+
 Replace `your_account_sid`, `your_auth_token`, and `your_number` with your actual Twilio account SID, Auth Token, and WhatsApp number.
 
-Reload the shell configuration:
+Make this file executable:
 
 ```sh
-source ~/.bashrc
+chmod +x backup_env.sh
 ```
 
-Again activate the virtual environment.
+Source the environment variables:
+
+```sh
+source backup_env.sh
+```
 
 ## Step 10: Install AWS CLI in the EC2 Instance
 
@@ -541,10 +546,10 @@ crontab -e
 Add the following line in the crontab file to run the script every 3 minutes:
 
 ```sh
-*/3 * * * * /path/to/backup_script.sh
+*/3 * * * * . /home/ubuntu/backup_env.sh && /home/ubuntu/backup_script.sh >> /home/ubuntu/backup.log 2>&1
 ```
 
-Replace `/path/to/backup_script.sh` with the actual path to your script.
+This cron job runs every 3 minutes, loading environment variables from `backup_env.sh`, executing `backup_script.sh`, and appending both output and errors to `backup.log`. Replace `/home/ubuntu/backup_env.sh` and `/home/ubuntu/backup_script.sh` with the actual path to your scripts.
 
 
 ## Step 13: Verify the Setup
@@ -569,11 +574,29 @@ Verify the cron logs:
 grep CRON /var/log/syslog
 ```
 
+![alt text](./images/cron-logs.png)
+
 ### Check WhatsApp
 
 Ensure you receive the WhatsApp notification on the specified number.
 
 ![alt text](./images/backup-wapp.png)
+
+### Backup using Cron Job
+
+The `backup_script.sh` will run automatically every 3 minutes due to the cron job, and a notification will be sent to WhatsApp. You can check WhatsApp to confirm that the cron job is working fine.
+
+![alt text](./images/cron-wapp.png)
+
+### Check the Contents of the Log File
+
+Check the entire content of the `backup.log` file using:
+
+```sh
+cat /home/ubuntu/backup.log
+```
+
+![alt text](./images/backup-output.png)
 
 ### Check S3 Bucket
 
