@@ -2,7 +2,7 @@
 
 This guide provides a comprehensive step-by-step process to automate MySQL database backups on an AWS EC2 instance, store them in an S3 bucket, and send a notification via WhatsApp using Twilio. In this document, we’ll walk through the process of automating MySQL database backups on an AWS EC2 instance and storing them in an S3 bucket. This setup will ensure that our data is backed up regularly and securely.
 
-![alt text](./images/backup-diagram.png)
+![alt text](https://raw.githubusercontent.com/AhnafNabil/MySQL-Backups-on-AWS-EC2-to-S3/main/images/backup-diagram.png)
 
 ## Prerequisites
 
@@ -26,11 +26,11 @@ For this project, we need an instance for mysql and other necessary resouces. We
     
     This command sets up your AWS CLI with the necessary credentials, region, and output format.
 
-    ![alt text](./images/configure.png)
+    ![alt text](https://raw.githubusercontent.com/AhnafNabil/MySQL-Backups-on-AWS-EC2-to-S3/main/images/configure.png)
 
     You will find the `AWS Access key` and `AWS Seceret Access key` on Lab description page,where you generated the credentials
 
-    ![alt text](./images/credentials.png)
+    ![alt text](https://raw.githubusercontent.com/AhnafNabil/MySQL-Backups-on-AWS-EC2-to-S3/main/images/credentials.png)
 
 
 ### Set Up a Pulumi Project
@@ -182,15 +182,15 @@ pulumi up
 ```
 Review the changes and confirm by selecting `yes`.
 
-![alt text](./images/pulumi-output.png)
+![alt text](https://raw.githubusercontent.com/AhnafNabil/MySQL-Backups-on-AWS-EC2-to-S3/main/images/pulumi-output.png)
 
 ### Verify the Deployment
 
 You can verify the created resources such as VPC, Subnet, EC2 instance using AWS console. 
 
-![alt text](./images/resource-map.png)
+![alt text](https://raw.githubusercontent.com/AhnafNabil/MySQL-Backups-on-AWS-EC2-to-S3/main/images/resource-map.png)
 
-![alt text](./images/sql-instance.png)
+![alt text](https://raw.githubusercontent.com/AhnafNabil/MySQL-Backups-on-AWS-EC2-to-S3/main/images/sql-instance.png)
 
 ## Step 2: Create an S3 Bucket and Lifecycle Rule
 
@@ -200,28 +200,28 @@ You can verify the created resources such as VPC, Subnet, EC2 instance using AWS
    - Click "Create bucket" and follow the prompts.
    - Make sure versioning is enabled as going forward we have to apply lifecycle policy on our bucket.
 
-![alt text](./images/bucket-name.png)
+![alt text](https://raw.githubusercontent.com/AhnafNabil/MySQL-Backups-on-AWS-EC2-to-S3/main/images/bucket-name.png)
 
-![alt text](./images/bucket-versioning.png)
+![alt text](https://github.com/AhnafNabil/MySQL-Backups-on-AWS-EC2-to-S3/blob/main/images/bucket-versioning.png?raw=true)
    
 ### Create a Lifecycle Rule
 
    - Navigate to the bucket's "Management" tab.
 
-      ![alt text](./images/lifecycle-rule.png)
+      ![alt text](https://raw.githubusercontent.com/AhnafNabil/MySQL-Backups-on-AWS-EC2-to-S3/main/images/lifecycle-rule.png)
 
    - Create a lifecycle rule to expire objects after 3 days.
    - Give name to your lifecycle rule.
    - Choose “Apply to all objects in the bucket” rule scope.
    - Set expiration days to 3 as we will be storing backups of last 3 days.
 
-      ![alt text](./images/lifecycle-rule-02.png)
+      ![alt text](https://raw.githubusercontent.com/AhnafNabil/MySQL-Backups-on-AWS-EC2-to-S3/main/images/lifecycle-rule-02.png)
 
-      ![alt text](./images/lifecycle-rule-03.png)
+      ![alt text](https://raw.githubusercontent.com/AhnafNabil/MySQL-Backups-on-AWS-EC2-to-S3/main/images/lifecycle-rule-03.png)
 
 Click create rule and it’s done.
 
-![alt text](./images/lifecycle-rule-04.png)
+![alt text](https://raw.githubusercontent.com/AhnafNabil/MySQL-Backups-on-AWS-EC2-to-S3/main/images/lifecycle-rule-04.png)
 
 ## Step 3: Attach an IAM Role to the EC2 Instance
 
@@ -232,18 +232,18 @@ Let’s create an IAM role with the necessary permissions for EC2 to write to ou
    - Go to the IAM console and create a new role.
    - Select trusted entity type as `AWS service` and usecase as `EC2` as we are creating the role for EC2 instance.
    
-      ![alt text](./images/role-01.png)
+      ![alt text](https://raw.githubusercontent.com/AhnafNabil/MySQL-Backups-on-AWS-EC2-to-S3/main/images/role-01.png)
 
    - Give a name to the role and click `Create role`.
 
-      ![alt text](./images/role-02.png)
+      ![alt text](https://raw.githubusercontent.com/AhnafNabil/MySQL-Backups-on-AWS-EC2-to-S3/main/images/role-02.png)
 
 ### Attach Policy for Permissions
 
    - On the role summary page, under the "Permissions" tab, click on the "Add permissions" button.
    - Choose `Create inline policy`.
 
-      ![alt text](./images/policy-01.png)
+      ![alt text](https://raw.githubusercontent.com/AhnafNabil/MySQL-Backups-on-AWS-EC2-to-S3/main/images/policy-01.png)
 
    - Attach the following `json` file in the policy editor:
 
@@ -269,7 +269,7 @@ Let’s create an IAM role with the necessary permissions for EC2 to write to ou
 
       Replace ``your-bucket-name`` with your bucket name.
 
-![alt text](./images/policy-02.png)
+![alt text](https://raw.githubusercontent.com/AhnafNabil/MySQL-Backups-on-AWS-EC2-to-S3/main/images/policy-02.png)
 
 ### Attach the Role to EC2
 
@@ -278,7 +278,7 @@ Let’s create an IAM role with the necessary permissions for EC2 to write to ou
    - Click on Actions > Security > Modify IAM Role.
    - In the dropdown list, you should see the role you created. Select it and click `Update IAM Role`.
 
-![alt text](./images/ec2-role.png)
+![alt text](https://raw.githubusercontent.com/AhnafNabil/MySQL-Backups-on-AWS-EC2-to-S3/main/images/ec2-role.png)
 
 ## Step 4: Install MySQL on the EC2 Instance
 
@@ -288,7 +288,7 @@ SSH into the EC2 instance using:
 ssh -i "<path-to-your-key>/<your-key.pem>" ubuntu@your-public-ip
 ```
 
-![alt text](./images/ssh-ec2.png)
+![alt text](https://raw.githubusercontent.com/AhnafNabil/MySQL-Backups-on-AWS-EC2-to-S3/main/images/ssh-ec2.png)
 
 If MySQL is not already installed on EC2 instance, you can install it using the following commands:
 
@@ -330,7 +330,7 @@ INSERT INTO product (name, price) VALUES ('Product1', 10.00), ('Product2', 20.00
 SELECT * FROM product;
 ``` 
 
-![alt text](./images/table-entry.png)
+![alt text](https://raw.githubusercontent.com/AhnafNabil/MySQL-Backups-on-AWS-EC2-to-S3/main/images/table-entry.png)
 
 ## Step 6: Create a Database User for Backups
 
@@ -344,7 +344,7 @@ GRANT PROCESS, RELOAD, LOCK TABLES, SHOW DATABASES, REPLICATION CLIENT ON *.* TO
 FLUSH PRIVILEGES;
 ```
 
-![alt text](./images/backup-user.png)
+![alt text](https://raw.githubusercontent.com/AhnafNabil/MySQL-Backups-on-AWS-EC2-to-S3/main/images/backup-user.png)
 
 Our database setup is completed and now let’s move forward to the next step of writing backup script.
 
@@ -392,7 +392,7 @@ Our database setup is completed and now let’s move forward to the next step of
     ```
     You should see `twilio` in the list of installed packages.
 
-    ![alt text](./images/list-pip.png)
+    ![alt text](https://raw.githubusercontent.com/AhnafNabil/MySQL-Backups-on-AWS-EC2-to-S3/main/images/list-pip.png)
 
 ## Step 9: Set Environment Variables in ``backup_env.sh`` file on your EC2 instance:
 
@@ -521,7 +521,7 @@ which python
 you will get a output similar like this:
 
 ```sh
-#!/path/to/your/venv/bin/python
+/path/to/your/venv/bin/python
 ```
 Replace the shebang line in your script with the correct path. 
 
@@ -564,7 +564,7 @@ Execute the backup script manually and check if the backup file is created and u
 ./backup_script.sh
 ```
 
-![alt text](./images/script-output.png)
+![alt text](https://raw.githubusercontent.com/AhnafNabil/MySQL-Backups-on-AWS-EC2-to-S3/main/images/script-output.png)
 
 ### Check Logs
 
@@ -574,19 +574,19 @@ Verify the cron logs:
 grep CRON /var/log/syslog
 ```
 
-![alt text](./images/cron-logs.png)
+![alt text](https://raw.githubusercontent.com/AhnafNabil/MySQL-Backups-on-AWS-EC2-to-S3/main/images/cron-logs.png)
 
 ### Check WhatsApp
 
 Ensure you receive the WhatsApp notification on the specified number.
 
-![alt text](./images/backup-wapp.png)
+![alt text](https://raw.githubusercontent.com/AhnafNabil/MySQL-Backups-on-AWS-EC2-to-S3/main/images/backup-wapp.png)
 
 ### Backup using Cron Job
 
 The `backup_script.sh` will run automatically every 3 minutes due to the cron job, and a notification will be sent to WhatsApp. You can check WhatsApp to confirm that the cron job is working fine.
 
-![alt text](./images/cron-wapp.png)
+![alt text](https://raw.githubusercontent.com/AhnafNabil/MySQL-Backups-on-AWS-EC2-to-S3/main/images/cron-wapp.png)
 
 ### Check the Contents of the Log File
 
@@ -596,13 +596,13 @@ Check the entire content of the `backup.log` file using:
 cat /home/ubuntu/backup.log
 ```
 
-![alt text](./images/backup-output.png)
+![alt text](https://raw.githubusercontent.com/AhnafNabil/MySQL-Backups-on-AWS-EC2-to-S3/main/images/backup-output.png)
 
 ### Check S3 Bucket
 
 Verify the backup file is uploaded to the S3 bucket.
 
-![alt text](./images/bucket-object.png)
+![alt text](https://raw.githubusercontent.com/AhnafNabil/MySQL-Backups-on-AWS-EC2-to-S3/main/images/bucket-object.png)
 
 We can see that our script has been executed successfully and has pushed the MySQL backup dump into our S3 bucket.
 
